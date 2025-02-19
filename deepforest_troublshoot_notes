@@ -1,0 +1,8 @@
+## Installation
+#module load python/3.9-2022.05
+    #Wheel building error simsimd
+#mdoule load python/3.7-
+    #ERROR: No matching distribution found for huggingface-hub>=0.25.0 (from DeepForest)
+
+#module load miniconda3/4.12.0-py38
+    # works

@@ -13,13 +13,16 @@ Imagery/resample_neon.slurm
 # MAXAR
 ## Moving and organizing data
 MAXAR data are cloned from shared Google Drive using rclone
+
 MAXAR_unzip_sort_files.sh
 - unzips and organizes the zipped folders from the google drive into two folders depending on the image data type
 
 ## Extracing Bounding boxes
 We do this to assess the coverage of the existing data.
+
 MAXAR_bbox_run.sh
 - submits slurm job that runs the following files in order:
+
 MAXAR_extract_bbox_fromXML.sh
 MAXAR_make_bbox.R
 

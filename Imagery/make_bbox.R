@@ -2,7 +2,7 @@ library(sf)
 library(dplyr)
 
 # Read the extracted bounding box data
-bbox_data <- read.csv("./bounding_boxes.csv")
+bbox_data <- read.csv("./MAXAR/bounding_boxes.csv")
 
 # Function to create a polygon from bounding box
 create_polygon <- function(row) {
@@ -23,6 +23,6 @@ bbox_data_sf <- bbox_data %>%
   st_as_sf(crs = 4326) # Use WGS 84 projection
 
 # Save as a shapefile
-st_write(bbox_data_sf, "bounding_boxes.shp", delete_layer = TRUE)
+st_write(bbox_data_sf, "./MAXAR/bounding_boxes.shp", delete_layer = TRUE)
 
 cat("Shapefile 'bounding_boxes.shp' created successfully!\n")

@@ -20,18 +20,8 @@ TreeAnnotation.sh
 TreeAnnotation.R
 processing data provided by https://github.com/weecology/NeonTreeEvaluation_package/tree/master
 
-# NEON Imagery
-## Downloading
-Imagery/NEON_image_download.slurm
-- Slurm script to run and of the R file with dependencies
-
-Imagery/NEON_image_download.R
-## Resamping from native 10cm resolution to 30cm resolution
-Imagery/resample_neon.slurm
-- Slurm script to run and of the R file with dependencies
-
-Imagery/resample_neon.sh
-Imagery/resample_neon_BART.sh
-
 # log file of issues from initiation
 deepforest_troublshoot_notes
+
+# Imagery
+This folder contains its own README for imagery processing scripts

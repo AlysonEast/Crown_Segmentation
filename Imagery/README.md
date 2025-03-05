@@ -12,12 +12,12 @@ Imagery/resample_neon.slurm
 
 # MAXAR
 ## Moving and organizing data
-MAXAR data are cloned from shared google drive using rclone
+MAXAR data are cloned from shared Google Drive using rclone
 MAXAR_unzip_sort_files.sh
-- unzips and organizes the zipped folders from the google drive into two folders depending on the image data tyep
+- unzips and organizes the zipped folders from the google drive into two folders depending on the image data type
 
 ## Extracing Bounding boxes
-We do this to assess coverage of the existing data.
+We do this to assess the coverage of the existing data.
 MAXAR_bbox_run.sh
 - submits slurm job that runs the following files in order:
 MAXAR_extract_bbox_fromXML.sh
@@ -25,4 +25,4 @@ MAXAR_make_bbox.R
 
 
 # NAIP
-NAIP_notes.txt
+NAIP imagery was pulled from google earth engine using the following script: https://code.earthengine.google.com/1b8ec0419479e1c448f0dbd275e1a8af

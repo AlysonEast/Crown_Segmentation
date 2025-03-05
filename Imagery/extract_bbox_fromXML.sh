@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Define output CSV file
-OUTPUT_FILE="bounding_boxes.csv"
+OUTPUT_FILE="./MAXAR/bounding_boxes.csv"
 
 # Ensure the output file has a header
 echo "filename,ULLON,ULLAT,URLON,URLAT,LRLON,LRLAT,LLLON,LLLAT" > "$OUTPUT_FILE"
 
 # Find all XML files (case-insensitive) in nested folders under ./RGB/
-find ./RGB/ -type f \( -iname "*.xml" -o -iname "*.XML" \) | while read -r xml; do
+find ./MAXAR/RGB/ -type f \( -iname "*.xml" -o -iname "*.XML" \) | while read -r xml; do
     # Extract filename for reference
     filename=$(basename "$xml")
 

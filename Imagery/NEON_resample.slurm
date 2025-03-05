@@ -9,4 +9,4 @@ module load gdal/3.3.1
 module load sqlite/3.36.0
 module load proj/8.1.0
 
-./resample_neon.sh
+./NEON_neon.sh

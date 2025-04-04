@@ -18,7 +18,7 @@ from deepforest import __version__
 import shapely
 import geopandas
 import rasterio
-import descartes
+#import descartes 
 
 ## Define geospatial function from https://gist.github.com/bw4sz/e2fff9c9df0ae26bd2bfa8953ec4a24c
 #"project" into layer CRS to overlap with street trees. This isn't really a projection but a translation of the coordinate system
@@ -43,7 +43,9 @@ def project(raster_path, boxes):
     boxes['geometry'] = boxes.apply(lambda x: shapely.geometry.box(x.left,x.bottom,x.right,x.top), axis=1)
     boxes = geopandas.GeoDataFrame(boxes, geometry='geometry')
     
-    boxes.crs = "+proj=lcc +lat_1=43 +lat_2=45.5 +lat_0=41.75 +lon_0=-120.5 +x_0=399999.9999999999 +y_0=0 +ellps=GRS80 +units=ft +no_defs"
+    # **Change 1: Automatically inherit CRS from raster**
+    with rasterio.open(raster_path) as dataset:
+        boxes.crs = dataset.crs
 
     return boxes
 
@@ -107,54 +109,51 @@ prebuilt_model = main.deepforest()
 prebuilt_model.use_release()
 
 #Load test data
-raster_path = "/fs/ess/PUOM0017/ForestScaling/DeepForest/Imagery/NEON/DP3.30010.001/neon-aop-products/2022/FullSite/D01/2022_BART_6/L3/Resample/cm30/2022_BART_6_314000_4876000_image_30cm.tif"
+raster_path = "/fs/ess/PUOM0017/ForestScaling/DeepForest/Imagery/NAIP/BART/match_NEON/NAIP_2022_BART_6_314000_4876000.tif"
 raster = Image.open(raster_path)
 numpy_image = np.array(raster)
 print(numpy_image.shape)
 
 #Predict entire tile
+#Patch size=800
 prebuilt_model.config["score_threshold"] = 0.05
-prediction = prebuilt_model.predict_tile(raster_path, patch_size=800, patch_overlap=0.1, return_plot=True, color=(0,0,255))
-prediction.head()
-prediction.score
+prediction = prebuilt_model.predict_tile(raster_path, patch_size=800, patch_overlap=0.1)
 
-#Export preditctions
-boxes = project(raster_path,prediction)
+boxes = project(raster_path, prediction)
+# Check the CRS to ensure it's set correctly
 print(boxes.crs)
-boxes.to_file("fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/NEON30cm_prebuilt_model_p800_o01_t005.shp", driver="ESRI Shapefile",crs_wkt=boxes.crs)
+
+#Export boxes as shapefile
+boxes.to_file("/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/NAIP_prebuilt_model_p800_o01_t005.shp", driver="ESRI Shapefile")
+
+#Patch size=400
+## patch_overlap=0.1
+prediction = prebuilt_model.predict_tile(raster_path, patch_size=400, patch_overlap=0.1)
+
+boxes = project(raster_path, prediction)
+# Check the CRS to ensure it's set correctly
+print(boxes.crs)
+
+#Export boxes as shapefile
+boxes.to_file("/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/NAIP_prebuilt_model_p400_o01_t005.shp", driver="ESRI Shapefile")
+## Patch_overlap=0.25
+prediction = prebuilt_model.predict_tile(raster_path, patch_size=400, patch_overlap=0.25)
+
+boxes = project(raster_path, prediction)
+# Check the CRS to ensure it's set correctly
+print(boxes.crs)
+
+#Export boxes as shapefile
+boxes.to_file("/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/NAIP_prebuilt_model_p400_o025_t005.shp", driver="ESRI Shapefile")
 
 
+#Patch size=200
+prediction = prebuilt_model.predict_tile(raster_path, patch_size=200, patch_overlap=0.1)
 
-##Format training annotations
-#convert hand annotations from shp into DeepForest format
-#train_rgb = "//.tif"
-#annotation = shapefile_to_annotations(shapefile="//train_projected.shp",
-#                                      rgb=train_rgb)
+boxes = project(raster_path, prediction)
+# Check the CRS to ensure it's set correctly
+print(boxes.crs)
 
-#make sure all annotations are valid.
+#Export boxes as shapefile
+boxes.to_file("/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/NAIP_prebuilt_model_p200_o01_t005.shp", driver="ESRI Shapefile")
 
-#Write converted dataframe to file. Saved alongside the images
-#crop_dir = "./Imagery/NAIP/crops/"
-#annotation.to_csv(crop_dir + "train_example.csv", index=False)
-
-#Find data on path
-#train_annotations= preprocess.split_raster(path_to_raster=train_rgb,
-#                                 annotations_file= crop_dir + "train_example.csv",
-#                                 base_dir=crop_dir,
-#                                 patch_size=400,
-#                                 patch_overlap=0.1)
-#View output
-#train_annotations.head()
-
-#Write window annotations file without a header row, same location as the "base_dir" above.
-#annotations_file= os.path.join(crop_dir, "train_example.csv")
-#train_annotations.to_csv(annotations_file,index=False, header=None)
-
-##Train Model
-# Example run with short training
-#trained_model = deepforest.deepforest()
-#trained_model.use_release()
-# Example run with short training
-#trained_model.config["epochs"] = 3
-#trained_model.config["save-snapshot"] = False
-#trained_model.train(annotations=annotations_file, input_type="fit_generator")

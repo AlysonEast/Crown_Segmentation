@@ -104,56 +104,63 @@ def shapefile_to_annotations(shapefile, rgb, savedir="."):
     
     return result
 
+
+############################################################################################################################
+########################################## Setting up for standarized outputs ##############################################
+############################################################################################################################
+SITE = "BART"
+PANNEL = "314000_4876000"
+
+PRODUCT = "NEON"
+RES = 0.3
+
 #Load the pretrained model
 prebuilt_model = main.deepforest()
 prebuilt_model.use_release()
 
 #Load test data
-raster_path = "/fs/ess/PUOM0017/ForestScaling/DeepForest/Imagery/NEON/DP3.30010.001/neon-aop-products/2022/FullSite/D01/2022_BART_6/L3/Resample/cm30/2022_BART_6_314000_4876000_image_30cm.tif"
+#raster_path = "/fs/ess/PUOM0017/ForestScaling/DeepForest/Imagery/NEON/DP3.30010.001/neon-aop-products/2022/FullSite/D01/2022_BART_6/L3/Resample/cm30/2022_BART_6_314000_4876000_image_30cm.tif"
+raster_path = f"/fs/ess/PUOM0017/ForestScaling/DeepForest/Imagery/{PRODUCT}/DP3.30010.001/neon-aop-products/2022/FullSite/D01/2022_{SITE}_6/L3/Resample/cm30/2022_{SITE}_6_{PANNEL}_image_30cm.tif"
 raster = Image.open(raster_path)
 numpy_image = np.array(raster)
 print(numpy_image.shape)
 
-#Predict entire tile
-#Patch size=800
 prebuilt_model.config["score_threshold"] = 0.05
-prediction = prebuilt_model.predict_tile(raster_path, patch_size=800, patch_overlap=0.1)
 
+####################################################Patch size = 800, 0.3m res, 240m focal#######################################
+PATCH = 800
+OVERLAP = 0.05
+
+prediction = prebuilt_model.predict_tile(raster_path, patch_size=PATCH, patch_overlap=OVERLAP)
 boxes = project(raster_path, prediction)
-# Check the CRS to ensure it's set correctly
-print(boxes.crs)
+output_path = f"/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/{PRODUCT}{int(RES*100)}cm_prebuilt_model_p{PATCH}_o{int(OVERLAP*1000):03d}_t005_f{int(PATCH * RES)}_{SITE}_{PANNEL}.shp"
+boxes.to_file(output_path, driver="ESRI Shapefile")
+###################################################Patch size = 400 px, 0.3m res, 120m focal####################################
+PATCH = 400
+OVERLAP = 0.05
 
-#Export boxes as shapefile
-boxes.to_file("/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/NEON30cm_prebuilt_model_p800_o01_t005.shp", driver="ESRI Shapefile")
-
-#Patch size=400
-## patch_overlap=0.1
-prediction = prebuilt_model.predict_tile(raster_path, patch_size=400, patch_overlap=0.1)
-
+prediction = prebuilt_model.predict_tile(raster_path, patch_size=PATCH, patch_overlap=OVERLAP)
 boxes = project(raster_path, prediction)
-# Check the CRS to ensure it's set correctly
-print(boxes.crs)
+output_path = f"/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/{PRODUCT}{int(RES*100)}cm_prebuilt_model_p{PATCH}_o{int(OVERLAP*1000):03d}_t005_f{int(PATCH * RES)}_{SITE}_{PANNEL}.shp"
+boxes.to_file(output_path, driver="ESRI Shapefile")
 
-#Export boxes as shapefile
-boxes.to_file("/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/NEON30cm_prebuilt_model_p400_o01_t005.shp", driver="ESRI Shapefile")
-## Patch_overlap=0.25
-prediction = prebuilt_model.predict_tile(raster_path, patch_size=400, patch_overlap=0.25)
+###################################################Patch size = 200 px, 0.3m res, 60m focal####################################
+# Patch size = 200 px (0.3m res = 60m focal)
+PATCH = 200
+OVERLAP_VALUES = [0.05, 0.1, 0.25]
 
+for OVERLAP in OVERLAP_VALUES:
+    print(f"Running inference with PATCH={PATCH}, OVERLAP={OVERLAP}")
+    prediction = prebuilt_model.predict_tile(raster_path, patch_size=PATCH, patch_overlap=OVERLAP)
+    boxes = project(raster_path, prediction)
+    
+    output_path = f"/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/{PRODUCT}{int(RES*100)}cm_prebuilt_model_p{PATCH}_o{int(OVERLAP*1000):03d}_t005_f{int(PATCH * RES)}_{SITE}_{PANNEL}.shp"
+    boxes.to_file(output_path, driver="ESRI Shapefile")
+###################################################Patch size = 133 px, 0.3m res, 40m focal####################################
+PATCH = 133
+OVERLAP = 0.05
+
+prediction = prebuilt_model.predict_tile(raster_path, patch_size=PATCH, patch_overlap=OVERLAP)
 boxes = project(raster_path, prediction)
-# Check the CRS to ensure it's set correctly
-print(boxes.crs)
-
-#Export boxes as shapefile
-boxes.to_file("/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/NEON30cm_prebuilt_model_p400_o025_t005.shp", driver="ESRI Shapefile")
-
-
-#Patch size=200
-prediction = prebuilt_model.predict_tile(raster_path, patch_size=200, patch_overlap=0.1)
-
-boxes = project(raster_path, prediction)
-# Check the CRS to ensure it's set correctly
-print(boxes.crs)
-
-#Export boxes as shapefile
-boxes.to_file("/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/NEON30cm_prebuilt_model_p200_o01_t005.shp", driver="ESRI Shapefile")
-
+output_path = f"/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/{PRODUCT}{int(RES*100)}cm_prebuilt_model_p{PATCH}_o{int(OVERLAP*1000):03d}_t005_f{int(PATCH * RES)}_{SITE}_{PANNEL}.shp"
+boxes.to_file(output_path, driver="ESRI Shapefile")

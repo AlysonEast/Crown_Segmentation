@@ -1,10 +1,12 @@
 library(terra)
 library(sf)
 
+res<-60
+
 # Define paths
-raster_dir <- "./NAIP/BART/"   # Directory containing .tif files
+raster_dir <- paste0("./NAIP/BART/",res,"cm/")   # Directory containing .tif files
 shapefile_path <- "../Shapefiles/LiDAR_Tiles.shp"  # Path to the shapefile
-output_dir <- "./NAIP/BART/match_NEON/"  # Directory for cropped output rasters
+output_dir <- paste0("./NAIP/BART/",res,"cm/match_NEON/")  # Directory for cropped output rasters
 dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 
 # Define target projection (UTM Zone 19N)
@@ -18,7 +20,8 @@ for (i in 1:nrow(polygons)) {
   poly <- polygons[i, ]  # Extract single polygon
   #poly <- st_transform(poly, target_crs)  # Reproject polygon to match target CRS
   poly_name <- poly$TileID  # Get polygon name
-  output_filename <- file.path(output_dir, paste0("NAIP_", poly_name, ".tif"))
+  poly_name <- substr(poly_name, 6, nchar(poly_name))
+  output_filename <- file.path(output_dir, paste0("NAIP_",res,"cm_", poly_name, ".tif"))
 
   # Identify and process intersecting raster tiles
   intersecting_rasters <- list()

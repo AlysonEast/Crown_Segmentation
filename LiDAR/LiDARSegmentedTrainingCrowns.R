@@ -1,7 +1,7 @@
 library(lidR)
 library(neonUtilities)
 library(neonOS)
-devtools::install_github("NEONScience/NEON-geolocation/geoNEON")
+#devtools::install_github("NEONScience/NEON-geolocation/geoNEON")
 library(geoNEON)
 library(terra)
 
@@ -21,6 +21,7 @@ CHM_base_path<-"./NEON/BART/DP3.30015.001/neon-aop-products/2022/FullSite/D01/20
 DTM_base_path<-"./NEON/BART/DP3.30024.001/neon-aop-products/2022/FullSite/D01/2022_BART_6/L3/DiscreteLidar/DTMGtif/"
 NAIP_base_path<-"../Imagery/NAIP/BART/"
 NEON_base_path<-"../Imagery/NEON/DP3.30010.001/neon-aop-products/2022/FullSite/D01/2022_BART_6/L3/Camera/Mosaic/"
+bbox_base_path<-"/media/aly/Penobscot/NEON/Crowns_Weinstein/predictions"
 
 #Read in LiDAR data and georectify
 NEON_las<-readLAS(paste0(LAS_base_path,"NEON_D01_BART_DP1_",Training_tiles[1,1],"_classified_point_cloud_colorized.laz"))
@@ -44,8 +45,11 @@ plotRGB(NAIP_30)
 NAIP_30_utm <- raster::projectRaster(from = NAIP_30, 
                                  to = NEON_10,
                                  method = "ngb")
+par(mfrow=c(1,2))
+plotRGB(NEON_10)
 plotRGB(NAIP_30_utm)
 
+tree_crowns<-read_sf(paste0(bbox_base_path,"/2019_BART_5_",Training_tiles[1,1],"_image.shp"))
 
 #Pulling in NEON Veg Data
 veglist <- loadByProduct(dpID="DP1.10098.001", 
@@ -61,7 +65,7 @@ veg <- joinTableNEON(veglist$vst_apparentindividual,
                      name2="vst_mappingandtagging")
 
 
-
+par(mfrow=c(1,1))
 symbols(veg$adjEasting, 
         veg$adjNorthing, 
         circles=veg$stemDiameter/100/2, 
@@ -158,7 +162,8 @@ NEON_dtm_crop <- crop(NEON_dtm, crop_60)
 NEON_10_crop <- crop(NEON_10, crop_60)
 NAIP_30_crop <- crop(NAIP_30_utm, crop_60)
 NAIP_60_crop <- crop(NAIP_60_utm, crop_60)
-  
+
+
 plot(NEON_las_crop)
 rgl::rglwidget()
 max(NEON_las_crop$Z)
@@ -195,7 +200,10 @@ rgl::rglwidget()
 metrics_NEON <- crown_metrics(segment_NEON, .stdtreemetrics, geom = "bbox")
 
 # Now plot using plotRGB
+par(mfrow=c(1,2))
 plotRGB(NEON_10_crop)
+plotRGB(NAIP_30_crop)
+
 
 # Then overlay the crown metrics polygons with no fill, just outlines
 # plot(st_geometry(metrics_NEON), 
@@ -214,7 +222,7 @@ BART_073_pts$canopyPosition_filled<-as.factor(BART_073_pts$canopyPosition_filled
 table(BART_073_pts$canopyPosition_filled, useNA="ifany")
 
 
-colors <- c("black", "white", "lightblue","purple")
+colors <- c("black", "gold", "lightblue","purple","white")
 pchs <- c(4, 16, 8, 1, 10)
 
 plot(BART_073_pts, 
@@ -236,4 +244,69 @@ plot(BART_073_pts,
      pch = pchs[BART_073_pts$canopyPosition_filled],
      add = TRUE)
 
+#Read in manually annotated bboxes
+bboxlist<-list.files("../Imagery/NAIP/Training/bbox", pattern = "*.shp")
+bboxlist
 
+#Process the first entry and use it to make plots
+NAIP_bbox<-read_sf(paste0("../Imagery/NAIP/Training/bbox/",bboxlist[1]))
+# Get bounding box
+buffered_box <- st_bbox(NAIP_bbox)
+bbox_crop <- extent(buffered_box)
+
+####Generate plot
+png("../Figures/TrainingVis.png", height = 10, width = 10, res = 300, units = "in")
+par(mfrow=c(2,2))
+plotRGB(NEON_10)
+plot(crop_60, add=TRUE, col="red")
+
+plotRGB(NAIP_30_utm)
+plot(crop_60, add=TRUE, col="red")
+
+plotRGB(NEON_10_crop)
+plot(BART_073_pts, 
+     col = colors[BART_073_pts$canopyPosition_filled],
+     pch = 16,
+     add = TRUE)
+plot(tree_crowns, col=NULL, border="lightblue", add=TRUE)
+
+plotRGB(NEON_10_crop)
+plot(BART_073_pts, 
+     col = colors[BART_073_pts$canopyPosition_filled],
+     pch = 16,
+     add = TRUE)
+plot(tree_crowns, col="transparent", border="lightblue", add=TRUE)
+
+plotRGB(NAIP_30_crop)
+plot(NAIP_bbox, col="transparent", border="lightblue", add=TRUE)
+dev.off()
+
+# Crop everything and export training image
+NAIP_30_crop <- crop(NAIP_30_utm, bbox_crop)
+writeRaster(NAIP_30_crop, paste0("../Imagery/NAIP/Training/Crop_Images/",
+                                 substr(bboxlist[1], 1, nchar(bboxlist[1])-15),
+                                 ".tif"))
+
+#Process the next entry to Crop everything and export training image
+NAIP_bbox<-read_sf(paste0("../Imagery/NAIP/Training/bbox/",bboxlist[2]))
+buffered_box <- st_bbox(NAIP_bbox)
+bbox_crop <- extent(buffered_box)
+NAIP_30_crop <- crop(NAIP_30_utm, bbox_crop)
+writeRaster(NAIP_30_crop, paste0("../Imagery/NAIP/Training/Crop_Images/",
+                                 substr(bboxlist[2], 1, nchar(bboxlist[2])-15),
+                                 ".tif"))
+
+#Process the next entry to Crop everything and export training image
+bboxlist[3]
+NAIP_bbox<-read_sf(paste0("../Imagery/NAIP/Training/bbox/",bboxlist[3]))
+buffered_box <- st_bbox(NAIP_bbox)
+bbox_crop <- extent(buffered_box)
+NEON_10_2<-brick(paste0(NEON_base_path,"2022_BART_6_",Training_tiles[2,1],"_image.tif"))
+NAIP_30_2<-brick(paste0(NAIP_base_path,"30cm/match_NEON/NAIP_30cm_BART_6_",Training_tiles[2,1],".tif"))
+NAIP_30_2_utm <- raster::projectRaster(from = NAIP_30_2, 
+                                       to = NEON_10_2,
+                                       method = "ngb")
+NAIP_30_crop <- crop(NAIP_30_2_utm, bbox_crop)
+writeRaster(NAIP_30_crop, paste0("../Imagery/NAIP/Training/Crop_Images/",
+                                 substr(bboxlist[3], 1, nchar(bboxlist[3])-15),
+                                 ".tif"))

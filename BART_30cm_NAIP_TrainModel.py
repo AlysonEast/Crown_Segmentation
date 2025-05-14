@@ -21,6 +21,13 @@ import rasterio
 #import descartes 
 
 import tempfile
+import torch
+import pandas as pd
+
+seed = 42
+#np.random.seed(seed)
+#random.seed(seed)
+#torch.manual_seed(seed)
 
 
 ## Define geospatial function from https://gist.github.com/bw4sz/e2fff9c9df0ae26bd2bfa8953ec4a24c
@@ -122,7 +129,7 @@ prebuilt_model.use_release()
 
 #Load test data
 #raster_path = "/fs/ess/PUOM0017/ForestScaling/DeepForest/Imagery/NEON/DP3.30010.001/neon-aop-products/2022/FullSite/D01/2022_BART_6/L3/Resample/cm30/2022_BART_6_316000_4881000_image_30cm.tif"
-raster_path = f"/fs/ess/PUOM0017/ForestScaling/DeepForest/Imagery/{PRODUCT}/{SITE}/match_NEON/{PRODUCT}_2022_{SITE}_6_{PANNEL}.tif"
+raster_path = f"/fs/ess/PUOM0017/ForestScaling/DeepForest/Imagery/{PRODUCT}/{SITE}/30cm/match_NEON/{PRODUCT}_30cm_{SITE}_6_{PANNEL}.tif"
 raster = Image.open(raster_path)
 numpy_image = np.array(raster)
 print(numpy_image.shape)
@@ -167,20 +174,21 @@ annotations_file= os.path.join(crop_dir, "annotations.csv")
 prebuilt_model.config["epochs"] = 3
 prebuilt_model.config["save-snapshot"] = False
 #prebuilt_model.train(annotations=annotations_file, input_type="fit_generator")
-model.config["train"]["csv_file"] = annotations_file
-model.config["train"]["root_dir"] = os.path.dirname(annotations_file)
+prebuilt_model.config["train"]["csv_file"] = annotations_file
+prebuilt_model.config["train"]["root_dir"] = os.path.dirname(annotations_file)
 
-model.create_trainer()
-model.config["train"]["fast_dev_run"] = True
-model.trainer.fit(model)
-pred_after_train = model.predict_image(path = raster_path)
+prebuilt_model.create_trainer()
+prebuilt_model.config["train"]["fast_dev_run"] = True
+prebuilt_model.trainer.fit(prebuilt_model)
+pred_after_train = prebuilt_model.predict_image(path = raster_path)
 
 #Create a trainer to make a checkpoint
-
 tmpdir = tempfile.TemporaryDirectory()
-model.trainer.save_checkpoint("{}/checkpoint.pl".format(tmpdir))
+prebuilt_model.trainer.save_checkpoint("{}/checkpoint.pl".format(tmpdir))
 
-pred_after_reload = after.predict_image(path = img_path)
+#reload the checkpoint to model object
+after = main.deepforest.load_from_checkpoint("{}/checkpoint.pl".format(tmpdir))
+pred_after_reload = after.predict_image(path = raster_path)
 
 assert not pred_after_train.empty
 assert not pred_after_reload.empty
@@ -188,5 +196,5 @@ pd.testing.assert_frame_equal(pred_after_train,pred_after_reload)
 
 model_path = "./TrainedModel"
 
-torch.save(model.model.state_dict(),model_path)
+torch.save(prebuilt_model.model.state_dict(),model_path)
 

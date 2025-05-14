@@ -305,9 +305,12 @@ for (j in 1:length(shapefiles)) {
   sa <- st_read(shapefiles[j], quiet = TRUE)  #Read manual annotation (polygon or box)
   full_bb    <- st_bbox(sa)
   cropped    <- crop(NAIP_30_mosaic, extent(full_bb))
+  names(cropped) <- c("Red", "Green", "Blue")
   writeRaster(cropped, paste0("../Imagery/NAIP/Training/Crop_Images/",
-                                   substr(bboxlist[1], 1, nchar(bboxlist[1])-15),
-                                   ".tif"), overwrite=TRUE)
+                                   substr(bboxlist[j], 1, nchar(bboxlist[j])-15),
+                                   ".tif"), 
+              overwrite=TRUE,
+              datatype = "INT1U")
   
   #Precompute for pixel conversion
   res_xy <- res(cropped)    # e.g. (0.3, 0.3) meters/pixel

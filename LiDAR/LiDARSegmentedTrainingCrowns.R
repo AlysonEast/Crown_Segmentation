@@ -287,7 +287,7 @@ NAIP_30_mosaic<-mosaic(NAIP_30_2_utm, NAIP_30_utm, fun="mean")
 bbox_folder <- "../Imagery/NAIP/Training/bbox/"
 naip_raster_path <- "../Imagery/NAIP/BART/NAIP_30cm_BART_6_<tile>.tif"
 crop_image_dir <- "../Imagery/NAIP/Training/Crop_Images/"
-annotations_csv <- "../Imagery/NAIP/Training/annotations.csv"
+annotations_csv <- "../Imagery/NAIP/Training/Crop_Images/annotations.csv"
 
 annotations <- data.frame(
   image_path = character(),
@@ -343,4 +343,6 @@ for (j in 1:length(shapefiles)) {
   }
 }
 table(annotations$image_path)
+head(annotations)
+annotations<-na.omit(annotations)
 write.csv(annotations, annotations_csv, row.names = FALSE, quote = FALSE)

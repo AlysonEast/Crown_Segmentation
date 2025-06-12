@@ -1,4 +1,4 @@
-# Crown_Segmentation
+# Crown Segmentation
 This repository implements a modular pipeline for tree crown segmentation using high-resolution aerial imagery and LiDAR data. It supports model training and evaluation with the DeepForest deep learning model and is designed to accommodate data from multiple spatial resolutions and sources, including NEON, NAIP, and MAXAR.
 
 ## Conceptual Overview

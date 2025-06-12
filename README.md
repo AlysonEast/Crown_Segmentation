@@ -5,15 +5,15 @@ This repository implements a modular pipeline for tree crown segmentation using 
 The workflow unfolds in five major phases:
 
 1. Imagery Acquisition & Processing
-  - Curate high-resolution remote sensing data from NEON (10 cm), NAIP (30 cm & 60 cm), and MAXAR (in development).
+    - Curate high-resolution remote sensing data from NEON (10 cm), NAIP (30 cm & 60 cm), and MAXAR (in development).
 2. Model Implementation: DeepForest
-  - Run the out-of-the-box DeepForest model on various imagery types. Then fine-tune DeepForest on the custom training data for domain-specific performance.
+    - Run the out-of-the-box DeepForest model on various imagery types. Then fine-tune DeepForest on the custom training data for domain-specific performance.
 3. Training Data Generation
-  - Combine curated imagery with LiDAR data to extract individual tree crowns and generate bounding boxes for supervised learning.
+    - Combine curated imagery with LiDAR data to extract individual tree crowns and generate bounding boxes for supervised learning.
 4. DeepForest Model Fine-Tuning and Model Application
-  - Apply both pretrained and fine-tuned models to different regions and imagery types.
+    - Apply both pretrained and fine-tuned models to different regions and imagery types.
 5. Model Comparison & Evaluation (in development)
-  - Quantitatively evaluate and compare the performance of off-the-shelf and fine-tuned models across spatial and resolution contexts.
+    - Quantitatively evaluate and compare the performance of off-the-shelf and fine-tuned models across spatial and resolution contexts.
 
 ## 1. Imagery Acquisition & Processing
 Download and process high-resolution aerial imagery, housed in: ```./Imagery/```

@@ -13,60 +13,6 @@ BART_30cm_prebuilt.py
 BART_30cm_TrainModel.py
 - Training model to see if it improves performance
 
-# Georectification of weinstein tree annotations
-TreeAnnotation.sh
-- Slurm script to run and of the R file with dependencies
-
-TreeAnnotation.R
-processing data provided by https://github.com/weecology/NeonTreeEvaluation_package/tree/master
-
-# log file of issues from initiation
-deepforest_troublshoot_notes
-
-# Imagery
-This folder contains its own README for imagery processing scripts
-# NEON Imagery
-## Downloading
-```
-NEON_image_download.R
-NEON_image_download.slurm
-```
-- Slurm script to run and of the R file with dependencies
-
-## Resamping from native 10cm resolution to 30cm resolution
-```
-NEON_resample.slurm
-```
-- Slurm script to run the following scripts with dependencies
-
-```
-NEON_resample.sh
-NEON_resample_BART.sh
-```
-
-# MAXAR
-## Moving and organizing data
-MAXAR data are cloned from shared Google Drive using rclone
-
-```
-MAXAR_unzip_sort_files.sh
-```
-unzips and organizes the zipped folders from the google drive into two folders depending on the image data type
-
-## Extracing Bounding boxes
-We do this to assess the coverage of the existing data.
-```
-MAXAR_bbox_run.sh
-```
-- submits slurm job that runs the following files in order:
-
-```
-MAXAR_extract_bbox_fromXML.sh
-MAXAR_make_bbox.R
-```
-
-# NAIP
-NAIP imagery was pulled from google earth engine using the following script: https://code.earthengine.google.com/1b8ec0419479e1c448f0dbd275e1a8af
 BART_10cm_prebuilt.py
 BART_30cm_NAIP_TrainModel.py
 BART_30cm_NAIP_Trained.py
@@ -104,26 +50,32 @@ This repository implements a modular pipeline for tree crown segmentation using 
 The workflow unfolds in five major phases:
 
 1. Imagery Acquisition & Processing
-Curate high-resolution remote sensing data from NEON (10 cm), NAIP (30 cm & 60 cm), and MAXAR (in development).
+  - Curate high-resolution remote sensing data from NEON (10 cm), NAIP (30 cm & 60 cm), and MAXAR (in development).
 2. Training Data Generation
-Combine curated imagery with LiDAR data to extract individual tree crowns and generate bounding boxes for supervised learning.
+  - Combine curated imagery with LiDAR data to extract individual tree crowns and generate bounding boxes for supervised learning.
 3. Model Implementation: DeepForest
-Run the out-of-the-box DeepForest model on various imagery types. Then fine-tune DeepForest on the custom training data for domain-specific performance.
+  - Run the out-of-the-box DeepForest model on various imagery types. Then fine-tune DeepForest on the custom training data for domain-specific performance.
 4. Prediction & Inference
-Apply both pretrained and fine-tuned models to different regions and imagery types.
+  - Apply both pretrained and fine-tuned models to different regions and imagery types.
 5. Model Comparison & Evaluation (in development)
-Quantitatively evaluate and compare the performance of off-the-shelf and fine-tuned models across spatial and resolution contexts.
+  - Quantitatively evaluate and compare the performance of off-the-shelf and fine-tuned models across spatial and resolution contexts.
 
 ## 1. Imagery Acquisition & Processing
-Download and process high-resolution aerial imagery:
+Download and process high-resolution aerial imagery, housed in: ```./Imagery/```
 - NEON (10 cm):
-  - Download: NEON_image_download.R, NEON_image_download.slurm
-  - Resample: NEON_resample.slurm → .sh scripts resample to 30/60 cm
+  - Download: `NEON_image_download.R`
+    - job submitted by: `NEON_image_download.slurm` with dependencies
+  - Resample: `NEON_resample.sh` scripts resample to 30/60 cm using `gdalwarp`
+    - job submitted by: `NEON_resample.slurm` with dependencies
 - NAIP (30 cm / 60 cm):
-  - Download via GEE: NAIP_export.js
-  - Tiling and preprocessing handled in Imagery/
+  - Download via GEE: https://code.earthengine.google.com/1b8ec0419479e1c448f0dbd275e1a8af
+  - Tiling and preprocessing: `NAIP_retile.R`
+    - GEE outputs of NAIP do not allign with the 1km x 1km tiles that NEON data are served in, so we moasic them and crop them to match the NEON tiles
+    - job submitted by: `NAIP_retile.slurm` with dependencies
 - MAXAR (∼30 cm RGB, in progress):
-  - Unzipping and bounding box extraction: MAXAR_unzip_sort_files.sh, MAXAR_bbox_run.sh
+  - Unzipping and : `MAXAR_unzip_sort_files.sh`
+  - Bounding box extraction: `MAXAR_extract_bbox_fromXML.sh` `MAXAR_bbox_run.sh`, `MAXAR_make_bbox.R`
+    - We do this to assess the coverage of the existing data
  
 ## 2. Training Data Generation
 - Combine imagery tiles with LiDAR-detected tree crowns from LiDARSegmentedTrainingCrowns.R
@@ -150,6 +102,12 @@ Download and process high-resolution aerial imagery:
   - Different image resolutions (10 cm vs 30 cm vs 60 cm)
   - Pretrained vs fine-tuned DeepForest
   - NAIP vs NEON vs MAXAR imagery
+
+## Other Scripts
+### Georectification of Weinstein tree annotations
+`TreeAnnotation.sh`
+- Slurm script to run and of the R file with dependencies
+- TreeAnnotation.R processing data provided by https://github.com/weecology/NeonTreeEvaluation_package/tree/master
 
 ## Requirements & Dependencies
 ### Python: 

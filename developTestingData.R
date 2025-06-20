@@ -20,30 +20,17 @@ Testing_tiles<-read.delim("../TestingTiles",header = FALSE)
 NEON_TOKEN<-read.delim("../NEON_token_AE",header = FALSE)[1,1]
 
 # Define paths to NEON and NAIP datasets
-LAS_base_path<-"./NEON/HARV/DP1.30003.001/neon-aop-products/2022/FullSite/D01/2022_HARV_6/L1/DiscreteLidar/ClassifiedPointCloud/"
-CHM_base_path<-"./NEON/HARV/DP3.30015.001/neon-aop-products/2022/FullSite/D01/2022_HARV_6/L3/DiscreteLidar/CanopyHeightModelGtif/"
-DTM_base_path<-"./NEON/HARV/DP3.30024.001/neon-aop-products/2022/FullSite/D01/2022_HARV_6/L3/DiscreteLidar/DTMGtif/"
+LAS_base_path<-"./NEON/HARV/DP1.30003.001/neon-aop-products/2022/FullSite/D01/2022_HARV_7/L1/DiscreteLidar/ClassifiedPointCloud/"
+CHM_base_path<-"./NEON/HARV/DP3.30015.001/neon-aop-products/2022/FullSite/D01/2022_HARV_7/L3/DiscreteLidar/CanopyHeightModelGtif/"
+DTM_base_path<-"./NEON/HARV/DP3.30024.001/neon-aop-products/2022/FullSite/D01/2022_HARV_7/L3/DiscreteLidar/DTMGtif/"
 NAIP_base_path<-"../Imagery/NAIP/HARV/"
-NEON_base_path<-"../Imagery/NEON/DP3.30010.001/neon-aop-products/2022/FullSite/D01/2022_HARV_6/L3/Camera/Mosaic/"
+NEON_base_path<-"../Imagery/NEON/DP3.30010.001/neon-aop-products/2022/FullSite/D01/2022_HARV_7/L3/Camera/Mosaic/"
 bbox_base_path<-"/media/aly/Penobscot/NEON/Crowns_Weinstein/predictions"
 
-# Load the first LAS file for exploration
-NEON_las<-readLAS(paste0(LAS_base_path,"NEON_D01_HARV_DP1_",Testing_tiles[1,1],"_classified_point_cloud_colorized.laz"))
-
-# Create bounding box and set projection manually
-sps <- as(extent(st_bbox(NEON_las)), 'SpatialPolygons')
-NEON_las@crs  # Check CRS of LAS
-proj4string(sps)
-proj4string(sps)<-CRS(paste0("+proj=utm +zone=19 +datum=WGS84")) #This is for zone 19 utm projects
-
-# Load NEON canopy height model and DTM
-NEON_chm<-raster(paste0(CHM_base_path,"NEON_D01_HARV_DP3_",Testing_tiles[1,1],"_CHM.tif"))
-NEON_dtm<-raster(paste0(DTM_base_path,"NEON_D01_HARV_DP3_",Testing_tiles[1,1],"_DTM.tif"))
-
 # Load high-res imagery from NEON and NAIP at multiple resolutions
-NEON_10<-brick(paste0(NEON_base_path,"2022_HARV_6_",Testing_tiles[1,1],"_image.tif"))
-NAIP_30<-brick(paste0(NAIP_base_path,"30cm/match_NEON/NAIP_30cm_HARV_6_",Testing_tiles[1,1],".tif"))
-NAIP_60<-brick(paste0(NAIP_base_path,"60cm/match_NEON/NAIP_60cm_HARV_6_",Testing_tiles[1,1],".tif"))
+NEON_10<-brick(paste0(NEON_base_path,"2022_HARV_7_",Testing_tiles[1,1],"_image.tif"))
+NAIP_30<-brick(paste0(NAIP_base_path,"30cm/match_NEON/NAIP_30cm_HARV_7_",Testing_tiles[1,1],".tif"))
+NAIP_60<-brick(paste0(NAIP_base_path,"60cm/match_NEON/NAIP_60cm_HARV_7_",Testing_tiles[1,1],".tif"))
 
 # Visual inspection of NAIP
 plotRGB(NAIP_30)
@@ -65,8 +52,8 @@ buffered_box <- st_bbox(NAIP_bbox)
 bbox_crop <- extent(buffered_box)
 
 #### 6. Cleaning and generating DeepForest Annotations for Testing
-NEON_10_2<-brick(paste0(NEON_base_path,"2022_HARV_6_",Testing_tiles[2,1],"_image.tif"))
-NAIP_30_2<-brick(paste0(NAIP_base_path,"30cm/match_NEON/NAIP_30cm_HARV_6_",Testing_tiles[2,1],".tif"))
+NEON_10_2<-brick(paste0(NEON_base_path,"2022_HARV_7_",Testing_tiles[2,1],"_image.tif"))
+NAIP_30_2<-brick(paste0(NAIP_base_path,"30cm/match_NEON/NAIP_30cm_HARV_7_",Testing_tiles[2,1],".tif"))
 NAIP_30_2_utm <- raster::projectRaster(from = NAIP_30_2, 
                                        to = NEON_10_2,
                                        method = "ngb")
@@ -74,7 +61,7 @@ NAIP_30_2_utm <- raster::projectRaster(from = NAIP_30_2,
 NAIP_30_mosaic<-mosaic(NAIP_30_2_utm, NAIP_30_utm, fun="mean")
 
 bbox_folder <- "../Imagery/NAIP/Testing/bbox/"
-naip_raster_path <- "../Imagery/NAIP/HARV/NAIP_30cm_HARV_6_<tile>.tif"
+naip_raster_path <- "../Imagery/NAIP/HARV/NAIP_30cm_HARV_7_<tile>.tif"
 crop_image_dir <- "../Imagery/NAIP/Testing/Crop_Images/"
 annotations_csv <- "../Imagery/NAIP/Testing/Crop_Images/annotations.csv"
 

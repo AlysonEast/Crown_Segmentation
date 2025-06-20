@@ -120,5 +120,6 @@ for (j in 1:length(shapefiles)) {
 }
 table(annotations$image_path)
 head(annotations)
+annotations$label<-"Tree"
 annotations<-na.omit(annotations)
 write.csv(annotations, annotations_csv, row.names = FALSE, quote = FALSE)

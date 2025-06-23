@@ -1,41 +1,55 @@
 library(terra)
 library(sf)
 
-res<-60
+res<-30
+site<-"HARV"
 
 # Define paths
-raster_dir <- paste0("./NAIP/BART/",res,"cm/")   # Directory containing .tif files
+raster_dir <- paste0("./NAIP/",site,"/",res,"cm/")   # Directory containing .tif files
 shapefile_path <- "../Shapefiles/LiDAR_Tiles.shp"  # Path to the shapefile
-output_dir <- paste0("./NAIP/BART/",res,"cm/match_NEON/")  # Directory for cropped output rasters
+output_dir <- paste0("./NAIP/",site,"/",res,"cm/match_NEON/")  # Directory for cropped output rasters
 dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+
+tif_files <- list.files(raster_dir, pattern = "\\.tif$", full.names = TRUE)
 
 # Define target projection (UTM Zone 19N)
 #target_crs <- "EPSG:32619"
 
 # Load shapefile
 polygons <- st_read(shapefile_path)
+head(polygons)
+polygons<-polygons[grep(site, polygons$TileID),]
+head(polygons)
+dim(polygons)
+
+polygons<-subset(polygons, TileID!="2022_HARV_7_727000_4709000")
 
 # Process each polygon separately
-for (i in 1:nrow(polygons)) {
+for (i in 75:nrow(polygons)) {
   poly <- polygons[i, ]  # Extract single polygon
   #poly <- st_transform(poly, target_crs)  # Reproject polygon to match target CRS
-  poly_name <- poly$TileID  # Get polygon name
-  poly_name <- substr(poly_name, 6, nchar(poly_name))
+  poly_name <- substr(poly$TileID, 6, nchar(poly$TileID))
+  poly_vect <- vect(poly)
   output_filename <- file.path(output_dir, paste0("NAIP_",res,"cm_", poly_name, ".tif"))
 
   # Identify and process intersecting raster tiles
   intersecting_rasters <- list()
-  tif_files <- list.files(raster_dir, pattern = "\\.tif$", full.names = TRUE)
-  
+  raster_index <- 1
+ 
   for (tif in tif_files) {
     r <- rast(tif)  # Load raster on-demand
 
     # Check for spatial intersection
-    if (relate(ext(r), vect(poly), "intersects")) {
-      cropped_raster <- crop(r, vect(poly))  # Crop before adding to list
-      intersecting_rasters <- append(intersecting_rasters, list(cropped_raster))
+    if (relate(ext(r), poly_vect, "intersects")) {
+      print(r)
+      cropped_raster <- crop(r, poly_vect)  # Crop before adding to list
+      tmpfile <- tempfile(fileext = ".tif")
+      writeRaster(cropped_raster, tmpfile, overwrite = TRUE)
+      intersecting_rasters[[raster_index]] <- tmpfile
+      raster_index <- raster_index + 1
+      rm(cropped_raster); gc()
     }
-    
+
     rm(r)  # Remove raster from memory after checking
     gc()
   }
@@ -46,17 +60,22 @@ for (i in 1:nrow(polygons)) {
   }
 
   # Mosaic if multiple rasters intersect
+#  if (length(intersecting_rasters) > 3) {
+#    message("Too many rasters intersect, skipping tile: ", poly_name)
+#    next
+#  }
   if (length(intersecting_rasters) > 1) {
-    merged_raster <- do.call(mosaic, c(intersecting_rasters, list(fun = mean)))
+    ras_list <- lapply(intersecting_rasters, rast)
+    merged_raster <- do.call(mosaic, c(ras_list, list(fun = mean)))
   } else {
-    merged_raster <- intersecting_rasters[[1]]
+    merged_raster <- rast(intersecting_rasters[[1]])
   }
 
   # Reproject raster to UTM Zone 19N
 #  reprojected_raster <- project(merged_raster, target_crs, method = "bilinear", res = target_res)
 
   # Mask the merged raster with the polygon
-  masked_raster <- mask(merged_raster, vect(poly))
+  masked_raster <- mask(merged_raster, poly_vect)
   masked_raster[is.nan(masked_raster)] <- NA  # Convert NaN to NA
 
   # Drop Band 4 (N_median), keep Band 1 (R), Band 2 (G), and Band 3 (B)
@@ -79,7 +98,7 @@ for (i in 1:nrow(polygons)) {
   # Cleanup memory
   # rm(masked_raster, reprojected_raster, merged_raster, intersecting_rasters)
   rm(masked_raster, merged_raster, intersecting_rasters)
+  terra::tmpFiles(remove = TRUE)
   gc()
-
 }
 

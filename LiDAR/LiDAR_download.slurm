@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --jobname=Download_Neon_LiDAR
+#SBATCH --job-name=Download_Neon_LiDAR
 #SBATCH --time=4:00:00 #4 hours
 #SBATCH --mail-type=ALL
 #SBATCH --output=out.%j

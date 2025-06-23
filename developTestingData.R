@@ -2,18 +2,25 @@
 library(lidR) 
 library(neonUtilities)
 library(neonOS)
-#devtools::install_github("NEONScience/NEON-geolocation/geoNEON")
+install.packages("Rcpp", dependencies = TRUE, INSTALL_opts = '--no-lock', repos = "http://cran.us.r-project.org")
+Sys.setenv(PKG_CONFIG_PATH = "~/local/openssl-3.4.1/lib/pkgconfig")
+Sys.setenv(LD_LIBRARY_PATH = paste("~/local/openssl-3.4.1/lib", Sys.getenv("LD_LIBRARY_PATH"), sep=":"))
+install.packages("openssl", type = "source", repos = "http://cran.us.r-project.org")
+install.packages("curl", repos = "http://cran.us.r-project.org")
+devtools::install_github("NEONScience/NEON-geolocation/geoNEON")
 library(geoNEON)
 library(terra)
 library(sf)
 library(sp)
 library(raster)
 library(rgl)
+install.packages("EBImage", repos = "http://cran.us.r-project.org")
 library(EBImage)
 
 #### 2. Defining Paths and Preliminarly Data Processing ####
 #Setting up the environment
-setwd("/media/aly/Penobscot/ForestScaling/Crown_Segmentation/LiDAR")
+#setwd("/media/aly/Penobscot/ForestScaling/Crown_Segmentation/LiDAR")
+setwd("./LiDAR")
 
 # Read in Testing tile names and NEON API token
 Testing_tiles<-read.delim("../TestingTiles",header = FALSE)
@@ -58,8 +65,6 @@ NAIP_30_2_utm <- raster::projectRaster(from = NAIP_30_2,
                                        to = NEON_10_2,
                                        method = "ngb")
 
-NAIP_30_mosaic<-mosaic(NAIP_30_2_utm, NAIP_30_utm, fun="mean")
-
 bbox_folder <- "../Imagery/NAIP/Testing/bbox/"
 naip_raster_path <- "../Imagery/NAIP/HARV/NAIP_30cm_HARV_7_<tile>.tif"
 crop_image_dir <- "../Imagery/NAIP/Testing/Crop_Images/"
@@ -77,37 +82,50 @@ annotations <- data.frame(
 
 shapefiles <- list.files(bbox_folder, pattern = "\\.shp$", full.names = TRUE)
 bboxlist <- list.files(bbox_folder, pattern = "\\.shp$", full.names = FALSE)
-for (j in 1:length(shapefiles)) {
-  sa <- st_read(shapefiles[j], quiet = TRUE)  #Read manual annotation (polygon or box)
-  full_bb    <- st_bbox(sa)
-  cropped    <- crop(NAIP_30_mosaic, extent(full_bb))
-  names(cropped) <- c("Red", "Green", "Blue")
-  writeRaster(cropped, paste0("../Imagery/NAIP/Testing/Crop_Images/",
-                                   substr(bboxlist[j], 1, nchar(bboxlist[j])-15),
-                                   ".tif"), 
-              overwrite=TRUE,
-              datatype = "INT1U")
+
+naip_rasters <- list(NAIP_30_utm, NAIP_30_2_utm)
+
+for (j in seq_along(shapefiles)) {
+  sa <- st_read(shapefiles[j], quiet = TRUE)
+  bb <- st_bbox(sa)
+  cropped <- NULL
   
-  #Precompute for pixel conversion
-  res_xy <- res(cropped)    # e.g. (0.3, 0.3) meters/pixel
-  ext_xy <- extent(cropped) # xmin, xmax, ymin, ymax in map units
-  #Loop over each polygon – compute relative bbox
+  # Try to find a raster that overlaps the bounding box
+  for (r in naip_rasters) {
+    if (raster::intersect(extent(r), extent(bb))) {
+      cropped <- crop(r, extent(bb))
+      break
+    }
+  }
+  
+  if (is.null(cropped)) {
+    warning(paste("No raster overlaps shapefile", shapefiles[j]))
+    next
+  }
+  
+  names(cropped) <- c("Red", "Green", "Blue")
+  out_name <- paste0(
+    crop_image_dir,
+    substr(bboxlist[j], 1, nchar(bboxlist[j]) - 15),
+    ".tif"
+  )
+  writeRaster(cropped, out_name, overwrite = TRUE, datatype = "INT1U")
+  
+  # Pixel conversion, annotation block stays the same...
+  res_xy <- res(cropped)
+  ext_xy <- extent(cropped)
   for (i in seq_len(nrow(sa))) {
     feature <- sa[i, ]
-    bb_f    <- st_bbox(feature)
-    
-    # X pixel indices
+    bb_f <- st_bbox(feature)
     xmin_px <- round((bb_f["xmin"] - ext_xy@xmin) / res_xy[1])
     xmax_px <- round((bb_f["xmax"] - ext_xy@xmin) / res_xy[1])
-    # Y pixel indices (invert origin)
     ymin_px <- round((ext_xy@ymax - bb_f["ymax"]) / res_xy[2])
     ymax_px <- round((ext_xy@ymax - bb_f["ymin"]) / res_xy[2])
     
-    # 5. Append one row per feature
     annotations <- rbind(
       annotations,
       data.frame(
-        image_path = paste0(substr(bboxlist[j], 1, nchar(bboxlist[j])-15),".tif"),
+        image_path = basename(out_name),
         xmin       = xmin_px,
         ymin       = ymin_px,
         xmax       = xmax_px,
@@ -118,6 +136,7 @@ for (j in 1:length(shapefiles)) {
     )
   }
 }
+
 table(annotations$image_path)
 head(annotations)
 annotations$label<-"Tree"

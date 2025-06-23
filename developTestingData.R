@@ -2,25 +2,18 @@
 library(lidR) 
 library(neonUtilities)
 library(neonOS)
-install.packages("Rcpp", dependencies = TRUE, INSTALL_opts = '--no-lock', repos = "http://cran.us.r-project.org")
-Sys.setenv(PKG_CONFIG_PATH = "~/local/openssl-3.4.1/lib/pkgconfig")
-Sys.setenv(LD_LIBRARY_PATH = paste("~/local/openssl-3.4.1/lib", Sys.getenv("LD_LIBRARY_PATH"), sep=":"))
-install.packages("openssl", type = "source", repos = "http://cran.us.r-project.org")
-install.packages("curl", repos = "http://cran.us.r-project.org")
-devtools::install_github("NEONScience/NEON-geolocation/geoNEON")
+#devtools::install_github("NEONScience/NEON-geolocation/geoNEON")
 library(geoNEON)
 library(terra)
 library(sf)
 library(sp)
 library(raster)
 library(rgl)
-install.packages("EBImage", repos = "http://cran.us.r-project.org")
 library(EBImage)
 
 #### 2. Defining Paths and Preliminarly Data Processing ####
 #Setting up the environment
-#setwd("/media/aly/Penobscot/ForestScaling/Crown_Segmentation/LiDAR")
-setwd("./LiDAR")
+setwd("/media/aly/Penobscot/ForestScaling/Crown_Segmentation/LiDAR")
 
 # Read in Testing tile names and NEON API token
 Testing_tiles<-read.delim("../TestingTiles",header = FALSE)
@@ -37,7 +30,7 @@ bbox_base_path<-"/media/aly/Penobscot/NEON/Crowns_Weinstein/predictions"
 # Load high-res imagery from NEON and NAIP at multiple resolutions
 NEON_10<-brick(paste0(NEON_base_path,"2022_HARV_7_",Testing_tiles[1,1],"_image.tif"))
 NAIP_30<-brick(paste0(NAIP_base_path,"30cm/match_NEON/NAIP_30cm_HARV_7_",Testing_tiles[1,1],".tif"))
-NAIP_60<-brick(paste0(NAIP_base_path,"60cm/match_NEON/NAIP_60cm_HARV_7_",Testing_tiles[1,1],".tif"))
+#NAIP_60<-brick(paste0(NAIP_base_path,"60cm/match_NEON/NAIP_60cm_HARV_7_",Testing_tiles[1,1],".tif"))
 
 # Visual inspection of NAIP
 plotRGB(NAIP_30)
@@ -92,7 +85,7 @@ for (j in seq_along(shapefiles)) {
   
   # Try to find a raster that overlaps the bounding box
   for (r in naip_rasters) {
-    if (raster::intersect(extent(r), extent(bb))) {
+    if (!is.null(raster::intersect(extent(r), extent(bb)))) {
       cropped <- crop(r, extent(bb))
       break
     }

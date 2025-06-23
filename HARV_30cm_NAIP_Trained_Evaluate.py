@@ -19,6 +19,8 @@ from deepforest import visualize
 
 #Geospatial packages
 import shapely
+from shapely.geometry import box
+
 import geopandas
 import rasterio
 #import descartes 
@@ -143,32 +145,100 @@ OVERLAP_VALUES = [0.25]
 ########################################## Setting evaluations from training data ##########################################
 ############################################################################################################################
 
-csv_file = get_data("./Imagery/NAIP/Testing/Crop_Images/annotations.csv")
+csv_file = "./Imagery/NAIP/Testing/Crop_Images/annotations.csv"
 root_dir = os.path.dirname(csv_file)
 
 predictions = model.predict_file(csv_file=csv_file, root_dir=os.path.dirname(csv_file))
 predictions.head()
 
 ground_truth = pd.read_csv(csv_file)
-ground_truth.head()
 
-visualize.plot_prediction_dataframe(predictions, ground_truth, root_dir = os.path.dirname(csv_file))
-
-result = evaluate.evaluate_image(predictions=predictions, ground_df=ground_truth, root_dir=os.path.dirname(csv_file), savedir=None)     
-result.head()
+ground_truth['geometry'] = ground_truth.apply(lambda row: box(row['xmin'], row['ymin'], row['xmax'], row['ymax']), axis=1)
+ground_truth = geopandas.GeoDataFrame(ground_truth, geometry='geometry')
 
 
-result["match"] = result.IoU > 0.4
-true_positive = sum(result["match"])
-recall = true_positive / result.shape[0]
-precision = true_positive / predictions.shape[0]
+result = evaluate.evaluate_boxes(
+    predictions=predictions,
+    ground_df=ground_truth,
+    root_dir=os.path.dirname(csv_file),  # Only needed if image_path is relative
+    savedir=None  # Set to a path if you want visualizations saved
+)
 
-recall
 
-precision
+#visualize.plot_prediction_dataframe(predictions=predictions, ground_df=ground_truth, root_dir=os.path.dirname(csv_file))
 
-result["class_recall"]
+#true_positive = sum(result["match"])
+#recall = true_positive / result.shape[0]
+#precision = true_positive / predictions.shape[0]
 
-result["results"].head()
+print("\n=== Evaluation Results Summary ===")
+print(result["results"])
+
+#print("\n=== Precision and Recall ===")
+#print(f"Recall: {recall}")
+#print(f"Precision: {precision}")
+
+print("\n=== Class Recall ===")
+print(result["class_recall"])
+
+print("\n=== Full Results Table Head ===")
+print(result["results"].head())
+
+
+result["results"].to_csv("HARV_Eval_Detections.csv", index=False)
+
 
 ################################################################################################################################
+
+import matplotlib.patches as patches
+
+# Create output directory for figures
+os.makedirs("HARV_Eval_Figures", exist_ok=True)
+
+# Loop through unique images in your annotations
+for image_name in ground_truth["image_path"].unique():
+    print(f"Plotting for image: {image_name}")
+    
+    # Load the image
+    image_path = os.path.join(root_dir, image_name)
+    image = Image.open(image_path)
+    
+    # Set up the plot
+    fig, ax = plt.subplots(figsize=(12, 12))
+    ax.imshow(image)
+    ax.set_title(f"{image_name} — Predictions (Red) vs Ground Truth (Blue)")
+
+    # Plot ground truth boxes (green)
+    gt_subset = ground_truth[ground_truth["image_path"] == image_name]
+    for _, row in gt_subset.iterrows():
+        rect = patches.Rectangle(
+            (row["xmin"], row["ymin"]),
+            row["xmax"] - row["xmin"],
+            row["ymax"] - row["ymin"],
+            linewidth=2,
+            edgecolor='blue',
+            facecolor='none'
+        )
+        ax.add_patch(rect)
+
+    # Plot prediction boxes (red)
+    pred_subset = predictions[predictions["image_path"] == image_name]
+    for _, row in pred_subset.iterrows():
+        rect = patches.Rectangle(
+            (row["xmin"], row["ymin"]),
+            row["xmax"] - row["xmin"],
+            row["ymax"] - row["ymin"],
+            linewidth=2,
+            edgecolor='red',
+            linestyle='--',
+            facecolor='none'
+        )
+        ax.add_patch(rect)
+
+    # Save figure
+    out_path = os.path.join("HARV_Eval_Figures", f"{os.path.splitext(image_name)[0]}_eval_plot.png")
+    plt.axis('off')
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=300, bbox_inches='tight')
+    plt.close()
+

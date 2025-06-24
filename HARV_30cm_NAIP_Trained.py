@@ -18,6 +18,8 @@ from deepforest import __version__
 import shapely
 import geopandas
 import rasterio
+from rasterio.mask import mask
+
 #import descartes 
 
 import tempfile
@@ -29,6 +31,12 @@ seed = 42
 #random.seed(seed)
 #torch.manual_seed(seed)
 
+
+############################################################################################################################
+############################################# Setting up nessesary functions ###############################################
+############################################################################################################################
+
+############################################ Define geospatial boxes function ##############################################
 
 ## Define geospatial function from https://gist.github.com/bw4sz/e2fff9c9df0ae26bd2bfa8953ec4a24c
 #"project" into layer CRS to overlap with street trees. This isn't really a projection but a translation of the coordinate system
@@ -114,6 +122,31 @@ def shapefile_to_annotations(shapefile, rgb, savedir="."):
     
     return result
 
+########################################## CHM mask function ##############################################
+def filter_by_chm(boxes, chm_path, height_threshold=3):
+    """Remove shapes with mean CHM < threshold (in meters)"""
+    filtered_boxes = []
+
+    with rasterio.open(chm_path) as src:
+        for _, row in boxes.iterrows():
+            geom = [row["geometry"]]
+            try:
+                out_image, _ = mask(src, geom, crop=True, filled=True)
+                data = out_image[0]
+                data = data[data != src.nodata]  # Remove NoData values
+
+                if len(data) > 0 and np.nanmean(data) >= height_threshold:
+                    filtered_boxes.append(row)
+            except Exception as e:
+                print(f"Skipping polygon due to error: {e}")
+                continue
+
+    if filtered_boxes:
+        return geopandas.GeoDataFrame(filtered_boxes, crs=boxes.crs)
+    else:
+        return geopandas.GeoDataFrame(columns=boxes.columns, crs=boxes.crs)
+
+
 ############################################################################################################################
 ########################################## Setting up for standarized outputs ##############################################
 ############################################################################################################################
@@ -163,6 +196,21 @@ for tile in tiles_df["TileID"]:
         print(f"Running inference with PATCH={PATCH}, OVERLAP={OVERLAP}")
         prediction = model.predict_tile(raster_path, patch_size=PATCH, patch_overlap=OVERLAP)
         boxes = project(raster_path, prediction)
+
+        print(f"Initial shape count: {len(boxes)}")
+
+        # Match CHM filename by tile coordinates
+        chm_dir = "/fs/ess/PUOM0017/ForestScaling/DeepForest/LiDAR/NEON/HARV/DP3.30015.001/neon-aop-products/2022/FullSite/D01/2022_HARV_7/L3/DiscreteLidar/CanopyHeightModelGtif"
+        chm_filename = f"NEON_D01_HARV_DP3_{PANNEL}_CHM.tif"
+        chm_path = os.path.join(chm_dir, chm_filename)
+
+        if not os.path.exists(chm_path):
+            print(f"CHM not found for {tile}, skipping CHM filtering...")
+        else:
+            boxes = filter_by_chm(boxes, chm_path, height_threshold=3)
+            print(f"{len(boxes)} shapes remain after CHM filtering.")
+
+        print(f"Filtered shape count: {len(boxes)}")
 
         output_path = f"/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/{PRODUCT}{int(RES*100)}cm_trained_model_p{PATCH}_o{int(OVERLAP*1000):03d}_t005_f{int(PATCH * RES)}_{SITE}_{PANNEL}.shp"
         boxes.to_file(output_path, driver="ESRI Shapefile")

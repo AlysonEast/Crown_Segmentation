@@ -124,10 +124,15 @@ def shapefile_to_annotations(shapefile, rgb, savedir="."):
 
 ########################################## CHM mask function ##############################################
 def filter_by_chm(boxes, chm_path, height_threshold=3):
-    """Remove shapes with mean CHM < threshold (in meters)"""
+    """Remove polygons with mean CHM value below height_threshold (meters)."""
     filtered_boxes = []
 
     with rasterio.open(chm_path) as src:
+        chm_crs = src.crs
+        # Reproject boxes if needed
+        if boxes.crs != chm_crs:
+            boxes = boxes.to_crs(chm_crs)
+
         for _, row in boxes.iterrows():
             geom = [row["geometry"]]
             try:
@@ -142,10 +147,13 @@ def filter_by_chm(boxes, chm_path, height_threshold=3):
                 continue
 
     if filtered_boxes:
-        return geopandas.GeoDataFrame(filtered_boxes, crs=boxes.crs)
+        # Reproject back to original CRS if needed
+        result = geopandas.GeoDataFrame(filtered_boxes, crs=chm_crs)
+        if chm_crs != boxes.crs:
+            result = result.to_crs(boxes.crs)
+        return result
     else:
         return geopandas.GeoDataFrame(columns=boxes.columns, crs=boxes.crs)
-
 
 ############################################################################################################################
 ########################################## Setting up for standarized outputs ##############################################
@@ -154,7 +162,7 @@ def filter_by_chm(boxes, chm_path, height_threshold=3):
 PRODUCT = "NAIP"
 RES = 0.3
 # Load tile information
-tiles_df = pd.read_csv("HARV_tilesOverlap.csv")
+tiles_df = pd.read_csv("HARV_tiles.csv")
 
 # Initialize DeepForest
 model = main.deepforest()
@@ -207,12 +215,11 @@ for tile in tiles_df["TileID"]:
         if not os.path.exists(chm_path):
             print(f"CHM not found for {tile}, skipping CHM filtering...")
         else:
+            print(f"Filtering {len(boxes)} boxes using CHM...")
             boxes = filter_by_chm(boxes, chm_path, height_threshold=3)
-            print(f"{len(boxes)} shapes remain after CHM filtering.")
+            print(f"{len(boxes)} boxes remain after CHM filtering.")
 
-        print(f"Filtered shape count: {len(boxes)}")
-
-        output_path = f"/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/{PRODUCT}{int(RES*100)}cm_trained_model_p{PATCH}_o{int(OVERLAP*1000):03d}_t005_f{int(PATCH * RES)}_{SITE}_{PANNEL}.shp"
+        output_path = f"/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/{PRODUCT}/{SITE}/{PRODUCT}{int(RES*100)}cm_trained_model_p{PATCH}_o{int(OVERLAP*1000):03d}_t005_f{int(PATCH * RES)}_{SITE}_{PANNEL}.shp"
         boxes.to_file(output_path, driver="ESRI Shapefile")
 
 ################################################################################################################################

@@ -2,6 +2,7 @@
 library(terra)
 library(sf)
 library(sp)
+library(raster)
 
 setwd("/media/aly/Penobscot/ForestScaling/Crown_Segmentation/LiDAR")
 
@@ -32,15 +33,23 @@ annotations <- data.frame(
 
 shapefiles <- list.files(bbox_folder, pattern = "\\.shp$", full.names = TRUE)
 bboxlist <- list.files(bbox_folder, pattern = "\\.shp$", full.names = FALSE)
+crop_image_dir <- "../Imagery/NAIP/Testing/Crop_Images/"
+imagelist<- list.files(crop_image_dir, pattern = "\\.tif$", full.names = TRUE)
 
 for (j in seq_along(shapefiles)) {
   sa <- st_read(shapefiles[j], quiet = TRUE)
   bb <- st_bbox(sa)
-  cropped <- NULL
-  
-  # Pixel conversion, annotation block stays the same...
-  res_xy <- res(cropped)
+  cropped <- brick(imagelist[j])
+
   ext_xy <- extent(cropped)
+  res_xy <- res(cropped)
+  
+  out_name <- paste0(
+    crop_image_dir,
+    substr(bboxlist[j], 1, nchar(bboxlist[j]) - 15),
+    ".tif"
+  )
+  
   for (i in seq_len(nrow(sa))) {
     feature <- sa[i, ]
     bb_f <- st_bbox(feature)

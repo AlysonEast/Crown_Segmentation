@@ -204,9 +204,9 @@ for image_name in ground_truth["image_path"].unique():
     image = Image.open(image_path)
     
     # Set up the plot
-    fig, ax = plt.subplots(figsize=(12, 12))
+    fig, ax = plt.subplots(figsize=(6, 6))
     ax.imshow(image)
-    ax.set_title(f"{image_name} — Predictions (Red) vs Ground Truth (Blue)")
+    ax.set_title(f"{image_name} — Predictions (Pink) vs Ground Truth (White)")
 
     # Plot ground truth boxes (green)
     gt_subset = ground_truth[ground_truth["image_path"] == image_name]
@@ -216,7 +216,7 @@ for image_name in ground_truth["image_path"].unique():
             row["xmax"] - row["xmin"],
             row["ymax"] - row["ymin"],
             linewidth=2,
-            edgecolor='blue',
+            edgecolor='white',
             facecolor='none'
         )
         ax.add_patch(rect)
@@ -229,7 +229,7 @@ for image_name in ground_truth["image_path"].unique():
             row["xmax"] - row["xmin"],
             row["ymax"] - row["ymin"],
             linewidth=2,
-            edgecolor='red',
+            edgecolor='lightsalmon',
             linestyle='--',
             facecolor='none'
         )

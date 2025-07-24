@@ -187,7 +187,7 @@ for tile in tiles_df["TileID"]:
     SITE = parts[1]
     PANNEL = f"{parts[3]}_{parts[4]}"
     
-    raster_path = f"/fs/ess/PUOM0017/ForestScaling/DeepForest/Imagery/{PRODUCT}/{SITE}/30cm/match_NEON/{PRODUCT}_30cm_{SITE}_7_{PANNEL}.tif"
+    raster_path = f"/fs/ess/PUOM0017/ForestScaling/DeepForest/Imagery/{PRODUCT}/{SITE}/30cm/match_NEON/{PRODUCT}_30cm_{SITE}_6_{PANNEL}.tif"
     
     if not os.path.exists(raster_path):
         print(f"Raster not found for {tile}, skipping...")
@@ -208,8 +208,8 @@ for tile in tiles_df["TileID"]:
         print(f"Initial shape count: {len(boxes)}")
 
         # Match CHM filename by tile coordinates
-        chm_dir = "/fs/ess/PUOM0017/ForestScaling/DeepForest/LiDAR/NEON/HARV/DP3.30015.001/neon-aop-products/2022/FullSite/D01/2022_HARV_7/L3/DiscreteLidar/CanopyHeightModelGtif"
-        chm_filename = f"NEON_D01_HARV_DP3_{PANNEL}_CHM.tif"
+        chm_dir = "/fs/ess/PUOM0017/ForestScaling/DeepForest/LiDAR/NEON/HARV/DP3.30015.001/neon-aop-products/2022/FullSite/D01/2022_BART_6/L3/DiscreteLidar/CanopyHeightModelGtif"
+        chm_filename = f"NEON_D01_BART_DP3_{PANNEL}_CHM.tif"
         chm_path = os.path.join(chm_dir, chm_filename)
 
         if not os.path.exists(chm_path):

@@ -161,29 +161,31 @@ result = evaluate.evaluate_boxes(
     predictions=predictions,
     ground_df=ground_truth,
     root_dir=os.path.dirname(csv_file),  # Only needed if image_path is relative
-    savedir=None  # Set to a path if you want visualizations saved
+    savedir="./Evaluation/Predictions/bbox/"  # Set to a path if you want visualizations saved
 )
 
 
 #visualize.plot_prediction_dataframe(predictions=predictions, ground_df=ground_truth, root_dir=os.path.dirname(csv_file))
 
-#true_positive = sum(result["match"])
-#recall = true_positive / result.shape[0]
-#precision = true_positive / predictions.shape[0]
+print(type(result))             # Is it a dict?
+print(result.keys())            # What keys does it have?
+
+print(type(result["results"]))  # Is this a DataFrame?
+print(result["results"].head()) # See the contents
+
+df =result["results"]
+
+#true_positive = len(df[df['match'] == True])
+#recall = true_positive / len(result)
+#precision = true_positive / len(predictions)
 
 print("\n=== Evaluation Results Summary ===")
 print(result["results"])
+print(result["results"].info)
 
-#print("\n=== Precision and Recall ===")
-#print(f"Recall: {recall}")
-#print(f"Precision: {precision}")
-
-print("\n=== Class Recall ===")
-print(result["class_recall"])
-
-print("\n=== Full Results Table Head ===")
-print(result["results"].head())
-
+print("\n=== Precision and Recall ===")
+print(f"Recall: {recall}")
+print(f"Precision: {precision}")
 
 result["results"].to_csv("HARV_Eval_Detections.csv", index=False)
 
@@ -204,7 +206,7 @@ for image_name in ground_truth["image_path"].unique():
     image = Image.open(image_path)
     
     # Set up the plot
-    fig, ax = plt.subplots(figsize=(6, 6))
+    fig, ax = plt.subplots(figsize=(10, 10))
     ax.imshow(image)
     ax.set_title(f"{image_name} — Predictions (Pink) vs Ground Truth (White)")
 

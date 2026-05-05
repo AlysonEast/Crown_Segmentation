@@ -6,9 +6,15 @@
 #SBATCH --account=PUOM0017
 #SBATCH --mem=20G
 
-module load gdal/3.3.1
-module load sqlite/3.36.0
-module load proj/8.1.0
-module load R/4.4.0-gnu11.2
+#module load gdal/3.3.1
+#module load sqlite/3.36.0
+#module load proj/8.1.0
+#module load R/4.4.0-gnu11.2
+
+module purge
+module load gcc/12.3.0
+module load R/4.4.0
+module load proj/9.2.1
+module load gdal/3.7.3
 
 Rscript NAIP_retile.R

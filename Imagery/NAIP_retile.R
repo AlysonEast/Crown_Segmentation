@@ -22,10 +22,10 @@ polygons<-polygons[grep(site, polygons$TileID),]
 head(polygons)
 dim(polygons)
 
-polygons<-subset(polygons, TileID!="2022_HARV_7_727000_4709000")
+#polygons<-subset(polygons, TileID!="2022_HARV_7_727000_4709000")
 
 # Process each polygon separately
-for (i in 75:nrow(polygons)) {
+for (i in 1:nrow(polygons)) {
   poly <- polygons[i, ]  # Extract single polygon
   #poly <- st_transform(poly, target_crs)  # Reproject polygon to match target CRS
   poly_name <- substr(poly$TileID, 6, nchar(poly$TileID))

@@ -11,7 +11,6 @@ import deepforest
 from deepforest import utilities
 from deepforest import main
 from deepforest import preprocess
-from deepforest import utilities
 from deepforest import __version__
 
 #Geospatial packages
@@ -117,84 +116,56 @@ def shapefile_to_annotations(shapefile, rgb, savedir="."):
 ############################################################################################################################
 ########################################## Setting up for standarized outputs ##############################################
 ############################################################################################################################
-SITE = "BART"
-PANNEL = "314000_4876000"
+os.chdir('/fs/ess/PUOM0017/ForestScaling/DeepForest')
 
+SITE = "BART"
 PRODUCT = "NAIP"
 RES = 0.3
+RES_CM = int(RES * 100)
+EPOCHS = 50
 
 #Load the pretrained model
 prebuilt_model = main.deepforest()
 prebuilt_model.use_release()
 
-#Load test data
-#raster_path = "/fs/ess/PUOM0017/ForestScaling/DeepForest/Imagery/NEON/DP3.30010.001/neon-aop-products/2022/FullSite/D01/2022_BART_6/L3/Resample/cm30/2022_BART_6_316000_4881000_image_30cm.tif"
-raster_path = f"/fs/ess/PUOM0017/ForestScaling/DeepForest/Imagery/{PRODUCT}/{SITE}/30cm/match_NEON/{PRODUCT}_30cm_{SITE}_6_{PANNEL}.tif"
-raster = Image.open(raster_path)
-numpy_image = np.array(raster)
-print(numpy_image.shape)
-
 #Predict entire tile
 prebuilt_model.config["score_threshold"] = 0.05
 
-###################################################Patch size = 200 px, 0.3m res, 60m focal####################################
-# Patch size = 200 px (0.3m res = 60m focal)
-#PATCH = 200
-#OVERLAP_VALUES = [0.05, 0.1, 0.25]
-
-#for OVERLAP in OVERLAP_VALUES:
-#    print(f"Running inference with PATCH={PATCH}, OVERLAP={OVERLAP}")
-#    prediction = prebuilt_model.predict_tile(raster_path, patch_size=PATCH, patch_overlap=OVERLAP)
-#    prediction.head()
-#    boxes = project(raster_path, prediction)
-    
-#    output_path = f"/fs/ess/PUOM0017/ForestScaling/DeepForest/Outputs/{PRODUCT}{int(RES*100)}cm_prebuilt_model_p{PATCH}_o{int(OVERLAP*1000):03d}_t005_f{int(PATCH * RES)}_{SITE}_{PANNEL}.shp"
-#    boxes.to_file(output_path, driver="ESRI Shapefile")
-################################################################################################################################
-
 ##################################################Model Training##############################################################
 ##Format training annotations
-#convert hand annotations from shp into DeepForest format
-train_rgb = "./Imagery/NAIP/Training//.tif"
-#annotation = shapefile_to_annotations(shapefile="//train_projected.shp",
-#                                      rgb=train_rgb)
-
 #Write converted dataframe to file. Saved alongside the images
 crop_dir = "./Imagery/NAIP/Training/Crop_Images/"
 
 #Write window annotations file without a header row, same location as the "base_dir" above.
 annotations_file= os.path.join(crop_dir, "annotations.csv")
-#train_annotations.to_csv(annotations_file,index=False, header=None)
+annotations_df = pd.read_csv(annotations_file)
+sample_image = os.path.join(crop_dir, annotations_df["image_path"].iloc[0])
 
 ##Train Model
 # Example run with short training
-#trained_model = deepforest.deepforest()
-#trained_model.use_release()
-# Example run with short training
-prebuilt_model.config["epochs"] = 3
+prebuilt_model.config["epochs"] = EPOCHS
 prebuilt_model.config["save-snapshot"] = False
 #prebuilt_model.train(annotations=annotations_file, input_type="fit_generator")
 prebuilt_model.config["train"]["csv_file"] = annotations_file
 prebuilt_model.config["train"]["root_dir"] = os.path.dirname(annotations_file)
 
 prebuilt_model.create_trainer()
-prebuilt_model.config["train"]["fast_dev_run"] = True
+prebuilt_model.config["train"]["fast_dev_run"] = False
 prebuilt_model.trainer.fit(prebuilt_model)
-pred_after_train = prebuilt_model.predict_image(path = raster_path)
+pred_after_train = prebuilt_model.predict_image(path = sample_image)
 
 #Create a trainer to make a checkpoint
 tmpdir = tempfile.TemporaryDirectory()
-prebuilt_model.trainer.save_checkpoint("{}/checkpoint.pl".format(tmpdir))
+prebuilt_model.trainer.save_checkpoint(f"{tmpdir.name}/checkpoint.ckpt")
 
 #reload the checkpoint to model object
-after = main.deepforest.load_from_checkpoint("{}/checkpoint.pl".format(tmpdir))
-pred_after_reload = after.predict_image(path = raster_path)
+after = main.deepforest.load_from_checkpoint(f"{tmpdir.name}/checkpoint.ckpt")
+pred_after_reload = after.predict_image(path = sample_image)
 
 assert not pred_after_train.empty
 assert not pred_after_reload.empty
 pd.testing.assert_frame_equal(pred_after_train,pred_after_reload)
 
-model_path = "./TrainedModel"
-
-torch.save(prebuilt_model.model.state_dict(),model_path)
-
+model_path = f"./TrainedModels/{PRODUCT}_{RES_CM}cm_trained.pt"
+os.makedirs(os.path.dirname(model_path), exist_ok=True)
+torch.save(prebuilt_model.model.state_dict(), model_path)

@@ -15,6 +15,44 @@ NAIP_base_path<-"./Imagery/NAIP/"
 
 splits<-c("Testing","Training")
 
+# =============================================================================
+# Step 0: Reproject all crop image TIFs to EPSG:32619 (UTM Zone 19N)
+# Run once before annotation processing to ensure CRS consistency.
+# Overwrites files only if reprojection is needed.
+# =============================================================================
+TARGET_CRS <- "EPSG:32619"
+
+for (t in 1:2) {
+  Split <- splits[t]
+  crop_image_dir <- paste0("./Imagery/NAIP/", Split, "/Crop_Images/")
+  tif_files <- list.files(crop_image_dir, pattern = "\\.tif$", full.names = TRUE)
+  
+  cat(paste0("\n--- Checking CRS for ", Split, " crop images (", length(tif_files), " files) ---\n"))
+  
+  for (tif in tif_files) {
+    r <- rast(tif)
+    current_crs <- crs(r, describe = TRUE)$authority
+    current_code <- crs(r, describe = TRUE)$code
+    
+    if (is.na(current_code) || paste0(current_crs, ":", current_code) != TARGET_CRS) {
+      cat(paste0("  Reprojecting: ", basename(tif), 
+                 " [", ifelse(is.na(current_code), "NO CRS", 
+                              paste0(current_crs, ":", current_code)), 
+                 "] -> ", TARGET_CRS, "\n"))
+      
+      r_reproj <- project(r, TARGET_CRS, method = "near")  # "near" preserves uint8 values
+      writeRaster(r_reproj, tif, overwrite = TRUE)
+      rm(r_reproj)
+    } else {
+      cat(paste0("  OK: ", basename(tif), "\n"))
+    }
+    
+    rm(r); gc()
+  }
+}
+
+cat("\nAll crop images confirmed in EPSG:32619. Proceeding to annotation processing.\n")
+
 for (t in 1:2) {
   print(paste0("processing: ",splits[t]))
   Split<-splits[t]
@@ -58,12 +96,11 @@ for (t in 1:2) {
       feature <- sa[i, ]
       bb_f    <- st_bbox(feature)
       
-      # X pixel indices
-      xmin_px <- round((bb_f["xmin"] - ext_xy$xmin) / res_xy[1])
-      xmax_px <- round((bb_f["xmax"] - ext_xy$xmin) / res_xy[1])
-      # Y pixel indices (invert origin)
-      ymin_px <- round((ext_xy$ymax - bb_f["ymax"]) / res_xy[2])
-      ymax_px <- round((ext_xy$ymax - bb_f["ymin"]) / res_xy[2])
+      # pixel indices
+      xmin_px <- max(0, round((bb_f["xmin"] - ext_xy$xmin) / res_xy[1]))
+      xmax_px <- min(ncol(cropped), round((bb_f["xmax"] - ext_xy$xmin) / res_xy[1]))
+      ymin_px <- max(0, round((ext_xy$ymax - bb_f["ymax"]) / res_xy[2]))
+      ymax_px <- min(nrow(cropped), round((ext_xy$ymax - bb_f["ymin"]) / res_xy[2]))
       
       # 5. Append one row per feature
       annotations <- rbind(

@@ -69,7 +69,7 @@ for (t in 1:2) {
       annotations <- rbind(
         annotations,
         data.frame(
-          image_path = paste0(substr(bboxlist[j], 1, nchar(bboxlist[j])-15),".tif"),
+          image_path = paste0(paste0(substr(bboxlist[j], 1, (nchar(bboxlist[j])-4)),".tif")),
           xmin       = xmin_px,
           ymin       = ymin_px,
           xmax       = xmax_px,

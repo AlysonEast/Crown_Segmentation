@@ -126,14 +126,12 @@ def shapefile_to_annotations(shapefile, rgb, savedir="."):
 PRODUCT = "NAIP"
 RES = 0.3
 # Load tile information
-tiles_df = pd.read_csv("TestingTiles")
-#2022_HARV_7_731000_4712000
 
 # Initialize DeepForest
 model = main.deepforest()
 model.use_release = False
 model.create_model()
-model.model.load_state_dict(torch.load("./TrainedModel"))
+model.model.load_state_dict(torch.load("./HARV_30cm_NAIP_Trained_Evaluate.py"))
 model.model.eval()
 model.config["score_threshold"] = 0.05
 

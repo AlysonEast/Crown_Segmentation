@@ -125,13 +125,14 @@ def shapefile_to_annotations(shapefile, rgb, savedir="."):
 # Settings
 PRODUCT = "NAIP"
 RES = 0.3
+os.chdir('/fs/ess/PUOM0017/ForestScaling/DeepForest')
 # Load tile information
 
 # Initialize DeepForest
 model = main.deepforest()
 model.use_release = False
 model.create_model()
-model.model.load_state_dict(torch.load("./HARV_30cm_NAIP_Trained_Evaluate.py"))
+model.model.load_state_dict(torch.load("./TrainedModels/NAIP_30cm_BART_trained.pt"))
 model.model.eval()
 model.config["score_threshold"] = 0.05
 
@@ -181,9 +182,9 @@ print("\n=== Evaluation Results Summary ===")
 print(result["results"])
 print(result["results"].info)
 
-print("\n=== Precision and Recall ===")
-print(f"Recall: {recall}")
-print(f"Precision: {precision}")
+#print("\n=== Precision and Recall ===")
+#print(f"Recall: {recall}")
+#print(f"Precision: {precision}")
 
 result["results"].to_csv("HARV_Eval_Detections.csv", index=False)
 
